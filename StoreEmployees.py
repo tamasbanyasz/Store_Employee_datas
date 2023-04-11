@@ -1,17 +1,53 @@
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as qtg
 import pandas as pd
+from abc import abstractmethod
 
 
-class GetEmployeesData:
+class MessageBox:
     def __init__(self):
+        self.msg = qtw.QMessageBox()
+        self.msg.setIcon(qtw.QMessageBox.Warning)
+
+    def incorrect_first_name(self, first_name):
+        self.msg.setWindowTitle("Warning MessageBox")
+        self.msg.setText(f"Incorrect  'First Name':   ' {first_name} '")
+        self.msg.exec_()
+
+    def incorrect_last_name(self, last_name):
+        self.msg.setWindowTitle("Warning MessageBox")
+        self.msg.setText(f"Incorrect  'Last Name':   ' {last_name} '")
+        self.msg.exec_()
+
+
+class NameValid(MessageBox):
+
+    def first_name_is_valid(self, first_name):
+        if not first_name.isalpha():
+            self.incorrect_first_name(first_name)
+        return first_name.isalpha()
+
+    def last_name_is_valid(self, last_name):
+        if not last_name.isalpha():
+            self.incorrect_last_name(last_name)
+        return last_name.isalpha()
+
+    @abstractmethod
+    def full_name_is_valid(self, first_name, last_name, age):
+        return self.first_name_is_valid(first_name) and self.last_name_is_valid(last_name)
+
+
+class GetEmployeesData(NameValid):
+    def __init__(self):
+        super().__init__()
         self.df = pd.DataFrame(columns=["First Name", "Last Name", "Age"])  # DataFrame to store employee datas
 
     def set_datas(self, firstname, lastname, age):  # add new employee datas to DataFrame
         self.df.loc[len(self.df.index)] = [firstname, lastname, age]
 
-    def get_datas(self, firstname, lastname, age):
-        self.set_datas(firstname, lastname, age)
+    def full_name_is_valid(self, first_name, last_name, age):
+        if super().full_name_is_valid(first_name, last_name, age):
+            self.set_datas(first_name, last_name, age)
 
 
 class MainWindow(qtw.QWidget):
@@ -98,6 +134,7 @@ class MainWindow(qtw.QWidget):
             ["First Name", "Last Name", "Age"]
         )
 
+
         self.datas = GetEmployeesData()
 
         self.button_1.clicked.connect(self.click_ok_event)  # Button click
@@ -130,7 +167,7 @@ class MainWindow(qtw.QWidget):
     def insert_items_into_treeview_box(self):
 
         ages = self.datas.df['Age'].values.tolist()  # store 'Age' values in classic list because the type of the DataFrame column is 'numpy.integer' and it couldnt display
-
+        print(self.datas.df['First Name'])
         for i in range(len(self.datas.df)):
             self.model.insertRow(i)  # make box rows
 
@@ -142,7 +179,9 @@ class MainWindow(qtw.QWidget):
 
         self.clear_treeview_box()
 
-        self.datas.get_datas(self.first_name_entry_box.text(), self.last_name_entry_box.text(), self.spin.value())
+        self.datas.full_name_is_valid(self.first_name_entry_box.text(),
+                                      self.last_name_entry_box.text(),
+                                      self.spin.value())
 
         self.clear_the_values()
 
