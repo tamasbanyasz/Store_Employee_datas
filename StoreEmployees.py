@@ -93,12 +93,12 @@ class Tabs:
         self.tab1 = qtw.QWidget()
         self.tab2 = qtw.QWidget()
         self.tabs.resize(1000, 500)
-        self.tabs.setStyleSheet("""QTabBar::tab {border: 1px solid black;background: white; height: 40px; width: 70px;
+        self.tabs.setStyleSheet("""QTabBar::tab {border: 1px solid black;background: grey; height: 40px; width: 70px;
                                    border-top-left-radius: 6px;                   
                                    border-top-right-radius: 6px;
                                    border-bottom-left-radius: 6px;}    
                                    QTabWidget::pane {border: 2px solid black;background: white;}
-                                   QTabBar::tab:!selected {margin-top: 2px;}
+                                   QTabBar::tab:!selected {margin-top: 2px; background: white}
                                    """)
 
         # Add tabs
