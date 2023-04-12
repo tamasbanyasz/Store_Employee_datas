@@ -1,7 +1,13 @@
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as qtg
+import PyQt5.QtCore as qtc
 import pandas as pd
-from abc import abstractmethod
+import os.path
+
+
+def file_is_exist(column_names):  # load datas from csv
+    if os.path.exists('employees.csv'):
+        return pd.read_csv('employees.csv', skiprows=1, names=column_names)
 
 
 class MessageBox:
@@ -20,34 +26,62 @@ class MessageBox:
         self.msg.exec_()
 
 
-class NameValid(MessageBox):
+class NameValid:
+    def __init__(self):
+        self.messagebox = MessageBox()
 
     def first_name_is_valid(self, first_name):
         if not first_name.isalpha():
-            self.incorrect_first_name(first_name)
+            self.messagebox.incorrect_first_name(first_name)
         return first_name.isalpha()
 
     def last_name_is_valid(self, last_name):
         if not last_name.isalpha():
-            self.incorrect_last_name(last_name)
+            self.messagebox.incorrect_last_name(last_name)
         return last_name.isalpha()
 
-    @abstractmethod
-    def full_name_is_valid(self, first_name, last_name, age):
+    def full_name_is_valid(self, first_name, last_name):
         return self.first_name_is_valid(first_name) and self.last_name_is_valid(last_name)
 
 
-class GetEmployeesData(NameValid):
+class GetEmployeesData:
     def __init__(self):
-        super().__init__()
-        self.df = pd.DataFrame(columns=["First Name", "Last Name", "Age"])  # DataFrame to store employee datas
+        self.name_valid = NameValid()
+        self.COLUMN_NAMES = ["First Name", "Last Name", "Age"]
+
+        self.csv = file_is_exist(self.COLUMN_NAMES)  # load datas from csv
+
+        self.df = pd.DataFrame(self.csv, columns=self.COLUMN_NAMES)  # DataFrame to store employee datas
+        print(self.df)
 
     def set_datas(self, firstname, lastname, age):  # add new employee datas to DataFrame
         self.df.loc[len(self.df.index)] = [firstname, lastname, age]
 
     def full_name_is_valid(self, first_name, last_name, age):
-        if super().full_name_is_valid(first_name, last_name, age):
+        if self.name_valid.full_name_is_valid(first_name, last_name):
             self.set_datas(first_name, last_name, age)
+            return True
+
+
+class SetInterface:
+    def __init__(self, model):
+        self.datas = GetEmployeesData()
+        self.model = model
+
+    def clear_treeview_box(self):  # clear the treeview box for the new datas
+        self.model.removeRows(0, self.model.rowCount(qtc.QModelIndex()))
+
+    def insert_items_into_treeview_box(self):
+
+        ages = self.datas.df[
+            'Age'].values.tolist()  # store 'Age' values in classic list because the type of the DataFrame column is 'numpy.integer' and it couldnt display
+        print(self.datas.df)
+        for i in range(len(self.datas.df)):
+            self.model.insertRow(i)  # make box rows
+
+            self.model.setData(self.model.index(i, 0), self.datas.df.loc[i, "First Name"])  # insert 'First Name'
+            self.model.setData(self.model.index(i, 1), self.datas.df.loc[i, "Last Name"])  # insert 'Last Name'
+            self.model.setData(self.model.index(i, 2), ages[i])  # insert 'Age' (from the list)
 
 
 class MainWindow(qtw.QWidget):
@@ -134,8 +168,7 @@ class MainWindow(qtw.QWidget):
             ["First Name", "Last Name", "Age"]
         )
 
-
-        self.datas = GetEmployeesData()
+        self.set = SetInterface(self.model)
 
         self.button_1.clicked.connect(self.click_ok_event)  # Button click
 
@@ -155,37 +188,22 @@ class MainWindow(qtw.QWidget):
 
         return last_name_entry
 
-    def clear_treeview_box(self):  # clear the treeview box for the new datas
-        for i in range(len(self.datas.df)):
-            self.model.removeRows(i, len(self.datas.df))
-
     def clear_the_values(self):
         self.first_name_entry_box.clear()
         self.last_name_entry_box.clear()
         self.spin.setValue(1)
 
-    def insert_items_into_treeview_box(self):
-
-        ages = self.datas.df['Age'].values.tolist()  # store 'Age' values in classic list because the type of the DataFrame column is 'numpy.integer' and it couldnt display
-        print(self.datas.df['First Name'])
-        for i in range(len(self.datas.df)):
-            self.model.insertRow(i)  # make box rows
-
-            self.model.setData(self.model.index(i, 0), self.datas.df.loc[i, "First Name"])  # insert 'First Name'
-            self.model.setData(self.model.index(i, 1), self.datas.df.loc[i, "Last Name"])     # insert 'Last Name'
-            self.model.setData(self.model.index(i, 2), ages[i])  # insert 'Age' (from the list)
-
     def click_ok_event(self):
 
-        self.clear_treeview_box()
+        if self.set.datas.full_name_is_valid(self.first_name_entry_box.text(),
+                                             self.last_name_entry_box.text(),
+                                             self.spin.value()):
+            self.set.clear_treeview_box()
+            self.clear_the_values()
 
-        self.datas.full_name_is_valid(self.first_name_entry_box.text(),
-                                      self.last_name_entry_box.text(),
-                                      self.spin.value())
+            self.set.insert_items_into_treeview_box()
 
-        self.clear_the_values()
-
-        self.insert_items_into_treeview_box()
+            self.set.datas.df.to_csv('employees.csv', index=False, encoding='utf-8')  # write to csv file
 
 
 if __name__ == "__main__":
