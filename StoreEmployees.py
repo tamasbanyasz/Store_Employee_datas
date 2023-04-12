@@ -84,9 +84,42 @@ class SetInterface:
             self.model.setData(self.model.index(i, 2), ages[i])  # insert 'Age' (from the list)
 
 
+class Tabs:
+    def __init__(self, parent):
+        self.layout = qtw.QVBoxLayout(parent)
+
+        # Initialize tab screen
+        self.tabs = qtw.QTabWidget()
+        self.tab1 = qtw.QWidget()
+        self.tab2 = qtw.QWidget()
+        self.tabs.resize(1000, 500)
+        self.tabs.setStyleSheet("""QTabBar::tab {border: 1px solid black;background: white; height: 40px; width: 70px;}    
+                                   QTabWidget::pane {border: 1px solid black;background: white;}""")
+
+        # Add tabs
+        self.tabs.addTab(self.tab1, "Tab 1")
+        self.tabs.addTab(self.tab2, "Tab 2")
+
+        # Create first tab
+        self.tab1.layout = qtw.QVBoxLayout(parent)
+        self.label = qtw.QLabel()
+
+        self.tab1.layout.addWidget(self.label)
+        self.tab1.setLayout(self.tab1.layout)
+
+        # Add tabs to widget
+        self.layout.addWidget(self.tabs)
+        parent.setLayout(self.layout)
+
+    def tab_1(self):
+        return self.tab1
+
+
 class MainWindow(qtw.QWidget):
     def __init__(self):
         super().__init__()
+        self.tab = Tabs(self)
+
         # Window settings
         self.HEIGHT = 800
         self.WIDTH = 600
@@ -95,35 +128,35 @@ class MainWindow(qtw.QWidget):
         self.setFixedHeight(self.WIDTH)
 
         # Frame 1
-        self.frame_1 = qtw.QFrame(self)
+        self.frame_1 = qtw.QFrame(self.tab.tab1)
         # Frame 1 settings
         self.frame_1.setFrameShape(qtw.QFrame.StyledPanel)
         self.frame_1.setGeometry(20, 20, 360, 130)
         self.frame_1.setStyleSheet("border :1px solid black")
 
         # Frame 2
-        self.frame_2 = qtw.QFrame(self)
+        self.frame_2 = qtw.QFrame(self.tab.tab1)
         # Frame 2 settings
         self.frame_2.setFrameShape(qtw.QFrame.StyledPanel)
         self.frame_2.setGeometry(400, 20, 360, 130)
         self.frame_2.setStyleSheet("border :1px solid black")
 
         # First Name Label
-        self.label_1 = qtw.QLabel("First Name ", self)
+        self.label_1 = qtw.QLabel("First Name ", self.tab.tab1)
         # First Name Label settings
         self.label_1.setFont(qtg.QFont('Helvetica', 16))
         self.label_1.setStyleSheet("background-color: White")
         self.label_1.move(30, 50)
 
         # Last Name Label
-        self.label_2 = qtw.QLabel("Last Name ", self)
+        self.label_2 = qtw.QLabel("Last Name ", self.tab.tab1)
         # Last Name Label settings
         self.label_2.setFont(qtg.QFont('Arial ', 16))
         self.label_2.setStyleSheet("background-color: White")
         self.label_2.move(30, 80)
 
         # Age Label
-        self.label_3 = qtw.QLabel("Age ", self)
+        self.label_3 = qtw.QLabel("Age ", self.tab.tab1)
         # Age Label settings
         self.label_3.setFont(qtg.QFont('Helvetica', 16))
         self.label_3.setStyleSheet("background-color: White")
@@ -134,27 +167,27 @@ class MainWindow(qtw.QWidget):
         self.last_name_entry_box = self.last_name_entry_box()
 
         # Button
-        self.button_1 = qtw.QPushButton("Ok", self)
+        self.button_1 = qtw.QPushButton("Ok", self.tab.tab1)
         # Button settings
         self.button_1.setStyleSheet("background-color: #E0E0E0")
-        self.button_1.setGeometry(200, 110, 50, 30)
+        self.button_1.setGeometry(185, 120, 50, 25)
 
         # SpinBox
-        self.spin = qtw.QSpinBox(self)
+        self.spin = qtw.QSpinBox(self.tab.tab1)
         # SpinBox settings
         self.spin.setRange(1, 99)  # set the age from 1 to 99
         self.spin.setStyleSheet("background-color: #E0E0E0")
         self.spin.move(410, 90)
 
         # GroupBox
-        self.dataGroupBox = qtw.QGroupBox("Employee", self)
+        self.dataGroupBox = qtw.QGroupBox("Employee", self.tab.tab1)
         # GroupBox settings
         self.dataGroupBox.setStyleSheet("title :2px solid black")
         self.dataGroupBox.setStyleSheet("border :2px solid black")
         self.dataGroupBox.setGeometry(50, 200, 600, 130)
 
         # TreeView
-        self.dataView = qtw.QTreeView(self)
+        self.dataView = qtw.QTreeView(self.tab.tab1)
         # TreeView settings
         self.dataView.setStyleSheet("border :1px solid black")
         self.dataView.setStyleSheet("background-color: #E0E0E0")
@@ -175,14 +208,14 @@ class MainWindow(qtw.QWidget):
         self.show()
 
     def first_name_entry_box(self):  # Entry box of the First Name
-        first_name_entry = qtw.QLineEdit(self)
+        first_name_entry = qtw.QLineEdit(self.tab.tab1)
         first_name_entry.setStyleSheet("background-color: White")
         first_name_entry.move(160, 54)
 
         return first_name_entry
 
     def last_name_entry_box(self):  # Entry box of the Last Name
-        last_name_entry = qtw.QLineEdit(self)
+        last_name_entry = qtw.QLineEdit(self.tab.tab1)
         last_name_entry.setStyleSheet("background-color: White")
         last_name_entry.move(160, 84)
 
