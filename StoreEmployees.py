@@ -1,8 +1,10 @@
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as qtg
 import PyQt5.QtCore as qtc
+import PyQt5.QtSql as qtsql
 import pandas as pd
 import os.path
+import sqlite3
 
 
 def file_is_exist(column_names):  # load datas from csv
@@ -44,9 +46,49 @@ class NameValid:
         return self.first_name_is_valid(first_name) and self.last_name_is_valid(last_name)
 
 
+class DataBase:
+    def __init__(self):
+        self.db = qtsql.QSqlDatabase.addDatabase('QSQLITE')
+        self.db.setDatabaseName('employees.db')
+        self.db.open()
+
+        # create SQL table
+        self.query = qtsql.QSqlQuery()
+        self.query.exec_("create table if not exists employees(id int primary key, ""firstname varchar(20), "
+                         "lastname varchar(20), "
+                         "age int)")
+
+        self.db_length = 0  # length of the loaded db. Use to count db index
+
+        self.read_from_db()  # read the database
+
+    def read_from_db(self):
+        connection = sqlite3.connect('employees.db')
+        crsr = connection.cursor()
+        crsr.execute("SELECT * FROM employees")
+        connection.commit()
+
+        loaded_sql = pd.read_sql('SELECT id, firstname, lastname, age FROM employees', connection)
+
+        self.db_length = len(loaded_sql)
+
+        return loaded_sql
+
+    def insert_into_db(self, firstname, lastname, age):
+        self.query.exec_(f"insert into employees values({self.db_length}, "
+                         f"'{firstname}', "
+                         f"'{lastname}', "
+                         f"'{age}')")
+
+    def show_db(self):
+        print(self.read_from_db())
+
+
 class GetEmployeesData:
     def __init__(self):
         self.name_valid = NameValid()
+        self.database = DataBase()
+
         self.COLUMN_NAMES = ["First Name", "Last Name", "Age"]
 
         self.csv = file_is_exist(self.COLUMN_NAMES)  # load datas from csv
@@ -59,6 +101,7 @@ class GetEmployeesData:
 
     def full_name_is_valid(self, first_name, last_name, age):
         if self.name_valid.full_name_is_valid(first_name, last_name):
+            self.database.insert_into_db(first_name, last_name, age)
             self.set_datas(first_name, last_name, age)
             return True
 
@@ -97,7 +140,10 @@ class Tabs:
                                    border-top-left-radius: 6px;                   
                                    border-top-right-radius: 6px;
                                    border-bottom-left-radius: 6px;}    
-                                   QTabWidget::pane {border: 2px solid black;background: white;}
+                                   QTabWidget::pane {border: 2px solid black;background: white;
+                                   border-top-left-radius: 6px;                   
+                                   border-top-right-radius: 6px;
+                                   border-bottom-left-radius: 6px;}
                                    QTabBar::tab:!selected {margin-top: 2px; background: white}
                                    """)
 
@@ -119,6 +165,9 @@ class Tabs:
     def tab_1(self):
         return self.tab1
 
+    def tab_2(self):
+        return self.tab2
+
 
 class MainWindow(qtw.QWidget):
     def __init__(self):
@@ -137,14 +186,18 @@ class MainWindow(qtw.QWidget):
         # Frame 1 settings
         self.frame_1.setFrameShape(qtw.QFrame.StyledPanel)
         self.frame_1.setGeometry(20, 20, 360, 130)
-        self.frame_1.setStyleSheet("border :1px solid black")
+        self.frame_1.setStyleSheet("border :1px solid black; border-bottom-left-radius: 6px;"
+                                   "border-top-left-radius: 6px;"                   
+                                   "border-top-right-radius: 6px;")
 
         # Frame 2
         self.frame_2 = qtw.QFrame(self.tab.tab1)
         # Frame 2 settings
         self.frame_2.setFrameShape(qtw.QFrame.StyledPanel)
         self.frame_2.setGeometry(400, 20, 360, 130)
-        self.frame_2.setStyleSheet("border :1px solid black")
+        self.frame_2.setStyleSheet("border :1px solid black; border-bottom-left-radius: 6px;"
+                                   "border-top-left-radius: 6px;"                   
+                                   "border-top-right-radius: 6px;")
 
         # First Name Label
         self.label_1 = qtw.QLabel("First Name ", self.tab.tab1)
@@ -188,7 +241,9 @@ class MainWindow(qtw.QWidget):
         self.dataGroupBox = qtw.QGroupBox("Employee", self.tab.tab1)
         # GroupBox settings
         self.dataGroupBox.setStyleSheet("title :2px solid black")
-        self.dataGroupBox.setStyleSheet("border :2px solid black")
+        self.dataGroupBox.setStyleSheet("border :1px solid black; border-bottom-left-radius: 6px;"
+                                        "border-top-left-radius: 6px;"                   
+                                        "border-top-right-radius: 6px;")
         self.dataGroupBox.setGeometry(50, 200, 600, 130)
 
         # TreeView
@@ -214,14 +269,25 @@ class MainWindow(qtw.QWidget):
 
     def first_name_entry_box(self):  # Entry box of the First Name
         first_name_entry = qtw.QLineEdit(self.tab.tab1)
-        first_name_entry.setStyleSheet("background-color: White")
+        first_name_entry.setStyleSheet("background-color: White;"
+                                       "border :1px solid black; border-bottom-left-radius: 6px;"
+                                       "border-top-left-radius: 6px;"
+                                       "border-top-right-radius: 6px;"
+                                       "border-bottom-right-radius: 6px;"
+                                       "border-bottom-left-radius: 6px;"
+                                       )
         first_name_entry.move(160, 54)
 
         return first_name_entry
 
     def last_name_entry_box(self):  # Entry box of the Last Name
         last_name_entry = qtw.QLineEdit(self.tab.tab1)
-        last_name_entry.setStyleSheet("background-color: White")
+        last_name_entry.setStyleSheet("background-color: White;"
+                                      "border :1px solid black; border-bottom-left-radius: 6px;"
+                                      "border-top-left-radius: 6px;"                   
+                                      "border-top-right-radius: 6px;"
+                                      "border-bottom-right-radius: 6px;"
+                                      "border-bottom-left-radius: 6px;")
         last_name_entry.move(160, 84)
 
         return last_name_entry
@@ -236,16 +302,18 @@ class MainWindow(qtw.QWidget):
         if self.set.datas.full_name_is_valid(self.first_name_entry_box.text(),
                                              self.last_name_entry_box.text(),
                                              self.spin.value()):
+
             self.set.clear_treeview_box()
             self.clear_the_values()
-
             self.set.insert_items_into_treeview_box()
 
             self.set.datas.df.to_csv('employees.csv', index=False, encoding='utf-8')  # write to csv file
 
+            self.set.datas.database.show_db()
+
 
 if __name__ == "__main__":
     app = qtw.QApplication([])
-
     mw = MainWindow()
+
     app.exec_()
