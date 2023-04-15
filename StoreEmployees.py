@@ -1,7 +1,9 @@
 import PyQt5.QtWidgets as qtw
-import PyQt5.QtGui as qtg
-import PyQt5.QtCore as qtc
 import PyQt5.QtSql as qtsql
+import PyQt5.QtCore as qtc
+import PyQt5.QtGui as qtg
+
+from datetime import datetime
 import pandas as pd
 import os.path
 import sqlite3
@@ -56,7 +58,8 @@ class DataBase:
         self.query = qtsql.QSqlQuery()
         self.query.exec_("create table if not exists employees(id int primary key, ""firstname varchar(20), "
                          "lastname varchar(20), "
-                         "age int)")
+                         "age int,"
+                         "date DATETIME)")
 
         self.db_length = 0  # length of the loaded db. Use to count db index
 
@@ -64,21 +67,21 @@ class DataBase:
 
     def read_from_db(self):
         connection = sqlite3.connect('employees.db')
-        crsr = connection.cursor()
-        crsr.execute("SELECT * FROM employees")
         connection.commit()
 
-        loaded_sql = pd.read_sql('SELECT id, firstname, lastname, age FROM employees', connection)
+        loaded_sql = pd.read_sql('SELECT id, firstname, lastname, age, date FROM employees', connection)
 
         self.db_length = len(loaded_sql)
 
         return loaded_sql
 
     def insert_into_db(self, firstname, lastname, age):
+
         self.query.exec_(f"insert into employees values({self.db_length}, "
                          f"'{firstname}', "
                          f"'{lastname}', "
-                         f"'{age}')")
+                         f"'{age}',"
+                         f"'{datetime.now()}')")
 
     def show_db(self):
         print(self.read_from_db())
@@ -89,7 +92,7 @@ class GetEmployeesData:
         self.name_valid = NameValid()
         self.database = DataBase()
 
-        self.COLUMN_NAMES = ["First Name", "Last Name", "Age"]
+        self.COLUMN_NAMES = ["First Name", "Last Name", "Age", "Date"]
 
         self.csv = file_is_exist(self.COLUMN_NAMES)  # load datas from csv
 
@@ -97,7 +100,7 @@ class GetEmployeesData:
         print(self.df)
 
     def set_datas(self, firstname, lastname, age):  # add new employee datas to DataFrame
-        self.df.loc[len(self.df.index)] = [firstname, lastname, age]
+        self.df.loc[len(self.df.index)] = [firstname, lastname, age, datetime.now().strftime('%d/%m/%Y %H:%M:%S')]
 
     def full_name_is_valid(self, first_name, last_name, age):
         if self.name_valid.full_name_is_valid(first_name, last_name):
@@ -125,6 +128,7 @@ class SetInterface:
             self.model.setData(self.model.index(i, 0), self.datas.df.loc[i, "First Name"])  # insert 'First Name'
             self.model.setData(self.model.index(i, 1), self.datas.df.loc[i, "Last Name"])  # insert 'Last Name'
             self.model.setData(self.model.index(i, 2), ages[i])  # insert 'Age' (from the list)
+            self.model.setData(self.model.index(i, 3), self.datas.df.loc[i, "Date"])  # insert 'Date'
 
 
 class Tabs:
@@ -254,12 +258,23 @@ class MainWindow(qtw.QWidget):
         self.dataView.setGeometry(55, 215, 590, 110)
 
         # Treeview inbox model
-        self.model = qtg.QStandardItemModel(0, 3)  # the 3 column of the treeview box
+        self.model = qtg.QStandardItemModel(0, 4)  # the 3 column of the treeview box
 
         self.dataView.setModel(self.model)
         self.model.setHorizontalHeaderLabels(  # Create the treeview box header
-            ["First Name", "Last Name", "Age"]
+            ["First Name", "Last Name", "Age", "Date"]
         )
+        # TreeView on Tab 2
+        self.dataView2 = qtw.QTreeView(self.tab.tab2)
+        # TreeView on Tab 2 settings
+        self.dataView2.setStyleSheet("border :1px solid black")
+        self.dataView2.setStyleSheet("background-color: #E0E0E0")
+        self.dataView2.setGeometry(10, 10, 750, 350)
+
+        # Select from folder
+        self.mod = qtw.QFileSystemModel()
+        self.mod.setRootPath(qtc.QDir.rootPath())
+        self.dataView2.setModel(self.mod)
 
         self.set = SetInterface(self.model)
 
