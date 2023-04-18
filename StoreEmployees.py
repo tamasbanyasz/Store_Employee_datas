@@ -122,6 +122,7 @@ class SetInterface:
         ages = self.datas.df[
             'Age'].values.tolist()  # store 'Age' values in classic list because the type of the DataFrame column is 'numpy.integer' and it couldnt display
         print(self.datas.df)
+
         for i in range(len(self.datas.df)):
             self.model.insertRow(i)  # make box rows
 
@@ -152,8 +153,8 @@ class Tabs:
                                    """)
 
         # Add tabs
-        self.tabs.addTab(self.tab1, "Tab 1")
-        self.tabs.addTab(self.tab2, "Tab 2")
+        self.tabs.addTab(self.tab1, "Add worker")
+        self.tabs.addTab(self.tab2, "Read from DB")
 
         # Create first tab
         self.tab1.layout = qtw.QVBoxLayout(parent)
@@ -166,17 +167,76 @@ class Tabs:
         self.layout.addWidget(self.tabs)
         parent.setLayout(self.layout)
 
-    def tab_1(self):
-        return self.tab1
+     
+class Tab2:
+    def __init__(self, parent):
+        self.tab = parent
+        self.db = DataBase()
 
-    def tab_2(self):
-        return self.tab2
+        self.index = None
+        self.row_id = None
+
+        self.dataView2 = qtw.QTreeView(self.tab)
+        # TreeView settings on Tab 2
+        self.dataView2.setStyleSheet("border :1px solid black")
+        self.dataView2.setStyleSheet("background-color: #E0E0E0")
+        self.dataView2.setGeometry(80, 50, 590, 110)
+
+        # Button on Tab 2
+        self.button_1 = qtw.QPushButton("Ok", self.tab)
+        # Button settings
+        self.button_1.setStyleSheet("background-color: #E0E0E0")
+        self.button_1.setGeometry(330, 10, 50, 25)
+
+        self.combo = qtw.QComboBox(self.tab)
+        self.combo.hide()
+
+        self.button_1.clicked.connect(self.click)
+        self.button_1.clicked.connect(self.show_combo)
+
+    def click(self):
+        db = self.db.read_from_db()
+
+        h = [str(i) for i in db['id']]  # add db ids to combobox
+        self.combo.addItems(h)
+
+        # Treeview inbox model in Tab 2
+        model2 = qtg.QStandardItemModel(0, 4)  # the 3 column of the treeview box
+
+        self.dataView2.setModel(model2)
+        model2.setHorizontalHeaderLabels(  # Create the treeview box header
+            db.columns
+        )
+
+        for i in range(len(db)):
+            model2.insertRow(i)  # make box rows
+
+            model2.setData(model2.index(i, 0), db['id'].values.tolist()[i])  # insert 'First Name'
+            model2.setData(model2.index(i, 1), db.loc[i, 'firstname'])  # insert 'First Name'
+            model2.setData(model2.index(i, 2), db.loc[i, 'lastname'])  # insert 'Last Name'
+            model2.setData(model2.index(i, 3), db['age'].values.tolist()[i])  # insert 'Age'
+            model2.setData(model2.index(i, 4), db.loc[i, 'date'])  # insert 'Date'
+
+        print(self.dataView2.clicked.connect(self.get_row))
+
+    def get_row(self):
+        row = []
+        for i in self.dataView2.selectedIndexes():
+            row.append(i.data())
+        self.row_id = row[0]
+        print(row)
+        print(self.row_id)
+
+    def show_combo(self):
+        self.combo.setGeometry(10, 10, 100, 20)
+        self.combo.show()
 
 
 class MainWindow(qtw.QWidget):
     def __init__(self):
         super().__init__()
         self.tab = Tabs(self)
+        self.tab2 = Tab2(self.tab.tab2)
 
         # Window settings
         self.HEIGHT = 800
@@ -248,14 +308,14 @@ class MainWindow(qtw.QWidget):
         self.dataGroupBox.setStyleSheet("border :1px solid black; border-bottom-left-radius: 6px;"
                                         "border-top-left-radius: 6px;"                   
                                         "border-top-right-radius: 6px;")
-        self.dataGroupBox.setGeometry(50, 200, 600, 130)
+        self.dataGroupBox.setGeometry(75, 200, 600, 130)
 
         # TreeView
         self.dataView = qtw.QTreeView(self.tab.tab1)
         # TreeView settings
         self.dataView.setStyleSheet("border :1px solid black")
         self.dataView.setStyleSheet("background-color: #E0E0E0")
-        self.dataView.setGeometry(55, 215, 590, 110)
+        self.dataView.setGeometry(80, 215, 590, 110)
 
         # Treeview inbox model
         self.model = qtg.QStandardItemModel(0, 4)  # the 3 column of the treeview box
@@ -264,17 +324,6 @@ class MainWindow(qtw.QWidget):
         self.model.setHorizontalHeaderLabels(  # Create the treeview box header
             ["First Name", "Last Name", "Age", "Date"]
         )
-        # TreeView on Tab 2
-        self.dataView2 = qtw.QTreeView(self.tab.tab2)
-        # TreeView on Tab 2 settings
-        self.dataView2.setStyleSheet("border :1px solid black")
-        self.dataView2.setStyleSheet("background-color: #E0E0E0")
-        self.dataView2.setGeometry(10, 10, 750, 350)
-
-        # Select from folder
-        self.mod = qtw.QFileSystemModel()
-        self.mod.setRootPath(qtc.QDir.rootPath())
-        self.dataView2.setModel(self.mod)
 
         self.set = SetInterface(self.model)
 
