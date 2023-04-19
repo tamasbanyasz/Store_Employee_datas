@@ -1,5 +1,4 @@
 import PyQt5.QtWidgets as qtw
-import PyQt5.QtSql as qtsql
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 
@@ -48,49 +47,69 @@ class NameValid:
         return self.first_name_is_valid(first_name) and self.last_name_is_valid(last_name)
 
 
-class DataBase:
+class WorkersPropertiesDataBase:
     def __init__(self):
-        self.db = qtsql.QSqlDatabase.addDatabase('QSQLITE')
-        self.db.setDatabaseName('employees.db')
-        self.db.open()
+        self.connection = sqlite3.connect('employees.db')
+        self.connection.commit()
+        self.cur = self.connection.cursor()
 
         # create SQL table
-        self.query = qtsql.QSqlQuery()
-        self.query.exec_("create table if not exists employees(id int primary key, ""firstname varchar(20), "
-                         "lastname varchar(20), "
+        self.cur.execute("create table if not exists employees(id int primary key, ""firstname varchar(20), "
+                         "lastname varchar(20),"
                          "age int,"
-                         "date DATETIME)")
+                         "date DATETIME);")
 
-        self.db_length = 0  # length of the loaded db. Use to count db index
+        self.cur.execute("create table if not exists permissions(id int primary key, worker_id int, ""mobile varchar(20), "
+                         "warehouse varchar(5));")
 
-        self.read_from_db()  # read the database
+        self.db_employees_length = 0  # length of the loaded db. Use to count db index
+        self.db_permissions_length = 0
 
-    def read_from_db(self):
-        connection = sqlite3.connect('employees.db')
-        connection.commit()
+        self.read_from_employees_table()  # read the database
 
-        loaded_sql = pd.read_sql('SELECT id, firstname, lastname, age, date FROM employees', connection)
+    def read_from_employees_table(self):
 
-        self.db_length = len(loaded_sql)
+        loaded_sql = pd.read_sql('SELECT id, firstname, lastname, age, date FROM employees', self.connection)
+
+        self.db_employees_length = len(loaded_sql)
 
         return loaded_sql
 
-    def insert_into_db(self, firstname, lastname, age):
+    def insert_into_employees_table(self, firstname, lastname, age):
 
-        self.query.exec_(f"insert into employees values({self.db_length}, "
+        self.cur.execute(f"insert into employees values({self.db_employees_length}, "
                          f"'{firstname}', "
                          f"'{lastname}', "
                          f"'{age}',"
                          f"'{datetime.now()}')")
+        self.connection.commit()
 
-    def show_db(self):
-        print(self.read_from_db())
+    def show_employees_table(self):
+        print(self.read_from_employees_table())
+
+    def insert_into_permissions_table(self, index, mobile, warehouse):
+
+        self.cur.execute(f"insert into permissions values({self.db_permissions_length},"
+                         f"'{index}', "
+                         f"'{mobile}',"
+                         f"'{warehouse}')")
+        self.connection.commit()
+
+    def read_from_premission_table(self):
+        loaded_sql = pd.read_sql('SELECT id, worker_id, mobile, warehouse FROM permissions', self.connection)
+
+        self.db_permissions_length = len(loaded_sql)
+
+        return loaded_sql
+
+    def show_premission_table(self):
+        print(self.read_from_premission_table())
 
 
 class GetEmployeesData:
     def __init__(self):
         self.name_valid = NameValid()
-        self.database = DataBase()
+        self.database = WorkersPropertiesDataBase()
 
         self.COLUMN_NAMES = ["First Name", "Last Name", "Age", "Date"]
 
@@ -104,12 +123,12 @@ class GetEmployeesData:
 
     def full_name_is_valid(self, first_name, last_name, age):
         if self.name_valid.full_name_is_valid(first_name, last_name):
-            self.database.insert_into_db(first_name, last_name, age)
+            self.database.insert_into_employees_table(first_name, last_name, age)
             self.set_datas(first_name, last_name, age)
             return True
 
 
-class SetInterface:
+class SetTreeViewBox:
     def __init__(self, model):
         self.datas = GetEmployeesData()
         self.model = model
@@ -167,14 +186,35 @@ class Tabs:
         self.layout.addWidget(self.tabs)
         parent.setLayout(self.layout)
 
-     
+
 class Tab2:
     def __init__(self, parent):
         self.tab = parent
-        self.db = DataBase()
+        self.db = WorkersPropertiesDataBase()
 
         self.index = None
         self.row_id = None
+
+        self.frame = qtw.QFrame(self.tab)
+        # Frame on Tab 2
+        self.frame.setFrameShape(qtw.QFrame.StyledPanel)
+        self.frame.setGeometry(80, 50, 590, 150)
+        self.frame.setStyleSheet("border :1px solid black;")
+        self.frame.hide()
+
+        self.label_1 = qtw.QLabel("Mobile", self.tab)
+        # Mobile Label settings
+        self.label_1.setFont(qtg.QFont('Helvetica', 8))
+        self.label_1.setStyleSheet("background-color: White")
+        self.label_1.move(115, 163)
+        self.label_1.hide()
+
+        self.label_2 = qtw.QLabel("Acces to warehouse", self.tab)
+        # Warehouse Label settings
+        self.label_2.setFont(qtg.QFont('Helvetica', 8))
+        self.label_2.setStyleSheet("background-color: White")
+        self.label_2.move(200, 163)
+        self.label_2.hide()
 
         self.dataView2 = qtw.QTreeView(self.tab)
         # TreeView settings on Tab 2
@@ -183,53 +223,88 @@ class Tab2:
         self.dataView2.setGeometry(80, 50, 590, 110)
 
         # Button on Tab 2
-        self.button_1 = qtw.QPushButton("Ok", self.tab)
-        # Button settings
+        self.button_1 = qtw.QPushButton("Load", self.tab)
+        # Button settings on Tab 2
         self.button_1.setStyleSheet("background-color: #E0E0E0")
         self.button_1.setGeometry(330, 10, 50, 25)
 
+        self.button_2 = qtw.QPushButton("Send", self.tab)
+        # Button settings on Tab 2
+        self.button_2.setStyleSheet("background-color: #E0E0E0")
+        self.button_2.setGeometry(620, 175, 50, 25)
+        self.button_2.hide()
+
         self.combo = qtw.QComboBox(self.tab)
+        self.combo.addItems(["None", "Nokia 3310", "Siemens A40", "Samsung S10"])
+        self.combo.setGeometry(81, 179, 100, 20)
         self.combo.hide()
 
-        self.button_1.clicked.connect(self.click)
-        self.button_1.clicked.connect(self.show_combo)
+        self.combo2 = qtw.QComboBox(self.tab)
+        self.combo2.addItems(["None", "True", "False"])
+        self.combo2.setGeometry(200, 179, 100, 20)
+        self.combo2.hide()
 
-    def click(self):
-        db = self.db.read_from_db()
+        self.button_1.clicked.connect(self.set_treeview_box)
+        self.dataView2.clicked.connect(self.show_hidden_widgets)
+        self.dataView2.clicked.connect(self.get_row)
+        self.button_2.clicked.connect(self.send)
 
-        h = [str(i) for i in db['id']]  # add db ids to combobox
-        self.combo.addItems(h)
-
+    def set_treeview_box(self):
+        self.db.show_premission_table()
         # Treeview inbox model in Tab 2
-        model2 = qtg.QStandardItemModel(0, 4)  # the 3 column of the treeview box
+        model = qtg.QStandardItemModel(0, 4)  # the 3 column of the treeview box
+        self.dataView2.setModel(model)
 
-        self.dataView2.setModel(model2)
-        model2.setHorizontalHeaderLabels(  # Create the treeview box header
+        db = self.db.read_from_employees_table()
+
+        model.setHorizontalHeaderLabels(  # Create the treeview box header
             db.columns
         )
 
         for i in range(len(db)):
-            model2.insertRow(i)  # make box rows
+            model.insertRow(i)  # make box rows
 
-            model2.setData(model2.index(i, 0), db['id'].values.tolist()[i])  # insert 'First Name'
-            model2.setData(model2.index(i, 1), db.loc[i, 'firstname'])  # insert 'First Name'
-            model2.setData(model2.index(i, 2), db.loc[i, 'lastname'])  # insert 'Last Name'
-            model2.setData(model2.index(i, 3), db['age'].values.tolist()[i])  # insert 'Age'
-            model2.setData(model2.index(i, 4), db.loc[i, 'date'])  # insert 'Date'
-
-        print(self.dataView2.clicked.connect(self.get_row))
+            model.setData(model.index(i, 0), db['id'].values.tolist()[i])  # insert 'First Name'
+            model.setData(model.index(i, 1), db.loc[i, 'firstname'])  # insert 'First Name'
+            model.setData(model.index(i, 2), db.loc[i, 'lastname'])  # insert 'Last Name'
+            model.setData(model.index(i, 3), db['age'].values.tolist()[i])  # insert 'Age'
+            model.setData(model.index(i, 4), db.loc[i, 'date'])  # insert 'Date'
 
     def get_row(self):
         row = []
+
         for i in self.dataView2.selectedIndexes():
             row.append(i.data())
+
         self.row_id = row[0]
-        print(row)
         print(self.row_id)
 
-    def show_combo(self):
-        self.combo.setGeometry(10, 10, 100, 20)
+    def show_hidden_widgets(self):
         self.combo.show()
+        self.label_1.show()
+        self.frame.show()
+        self.label_2.show()
+        self.combo2.show()
+        self.button_2.show()
+
+    def send(self):
+        a = self.combo2.currentText()
+        b = self.combo.currentText()
+        if a != "None":
+            print(a)
+            print(b)
+            print(self.row_id)
+            self.db.insert_into_permissions_table(self.row_id, b, a)
+            self.db.show_premission_table()
+            self.combo.setCurrentText("None")
+            self.combo2.setCurrentText("None")
+            self.dataView2.reset()
+            self.combo.hide()
+            self.label_1.hide()
+            self.frame.hide()
+            self.label_2.hide()
+            self.combo2.hide()
+            self.button_2.hide()
 
 
 class MainWindow(qtw.QWidget):
@@ -325,7 +400,7 @@ class MainWindow(qtw.QWidget):
             ["First Name", "Last Name", "Age", "Date"]
         )
 
-        self.set = SetInterface(self.model)
+        self.set = SetTreeViewBox(self.model)
 
         self.button_1.clicked.connect(self.click_ok_event)  # Button click
 
@@ -373,7 +448,7 @@ class MainWindow(qtw.QWidget):
 
             self.set.datas.df.to_csv('employees.csv', index=False, encoding='utf-8')  # write to csv file
 
-            self.set.datas.database.show_db()
+            self.set.datas.database.show_employees_table()
 
 
 if __name__ == "__main__":
