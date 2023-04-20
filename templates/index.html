@@ -24,7 +24,7 @@
     </nav>
 
     <div class="container">
-        {% for worker in l %}
+        {% for worker in loaded_sql_in_dict %}
             <div class="card mt-3" style="width: 18rem;">
                 <div class="card-body">
                     <h5 class="card-title">{{ worker.firstname }}</h5>
