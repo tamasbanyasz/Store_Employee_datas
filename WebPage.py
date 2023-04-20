@@ -10,9 +10,9 @@ class ReadFromDB:
 
     def read_db(self):
         loaded_sql = pd.read_sql('SELECT id, firstname, lastname, age, date FROM employees', self.connection)
-        l = loaded_sql.to_dict('records')
+        loaded_sql_in_dict = loaded_sql.to_dict('records')
 
-        return l
+        return loaded_sql_in_dict
 
 
 class SelfBrowser:
@@ -24,5 +24,13 @@ class SelfBrowser:
         @self.app.route('/')
         @self.app.route('/home')
         def home():
-            return render_template('index.html', l=self.loaded_db)
+            return render_template('index.html', loaded_sql_in_dict=self.loaded_db)
 
+        
+def main():
+    self_browser = SelfBrowser(__name__)
+    self_browser.app.run(debug=True)
+
+
+if __name__ == '__main__':
+    main()
