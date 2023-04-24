@@ -50,7 +50,6 @@ class NameValid:
 class WorkersPropertiesDataBase:
     def __init__(self):
         self.connection = sqlite3.connect('employees.db')
-        self.connection.commit()
         self.cur = self.connection.cursor()
 
         # create SQL table
@@ -60,7 +59,8 @@ class WorkersPropertiesDataBase:
                          "date DATETIME);")
 
         self.cur.execute("create table if not exists permissions(id int primary key, worker_id int, ""mobile varchar(20), "
-                         "warehouse varchar(5));")
+                         "warehouse varchar(5),"
+                         "FOREIGN KEY(worker_id) REFERENCES employees(id));")
 
         self.db_employees_length = 0  # length of the loaded db. Use to count db index
         self.db_permissions_length = 0
@@ -69,7 +69,7 @@ class WorkersPropertiesDataBase:
 
     def read_from_employees_table(self):
 
-        loaded_sql = pd.read_sql('SELECT id, firstname, lastname, age, date FROM employees', self.connection)
+        loaded_sql = pd.read_sql('SELECT * FROM employees', self.connection)
 
         self.db_employees_length = len(loaded_sql)
 
@@ -77,7 +77,7 @@ class WorkersPropertiesDataBase:
 
     def insert_into_employees_table(self, firstname, lastname, age):
 
-        self.cur.execute(f"insert into employees values({self.db_employees_length}, "
+        self.cur.execute(f"insert into employees values({self.db_employees_length},"
                          f"'{firstname}', "
                          f"'{lastname}', "
                          f"'{age}',"
@@ -85,7 +85,7 @@ class WorkersPropertiesDataBase:
         self.connection.commit()
 
     def show_employees_table(self):
-        print(self.read_from_employees_table())
+        print(f'\nEmployees Table:\n{self.read_from_employees_table()}')
 
     def insert_into_permissions_table(self, index, mobile, warehouse):
 
@@ -97,13 +97,21 @@ class WorkersPropertiesDataBase:
 
     def read_from_premission_table(self):
         loaded_sql = pd.read_sql('SELECT id, worker_id, mobile, warehouse FROM permissions', self.connection)
+        
+        # Specific query
+        specific_query = pd.read_sql("SELECT employees.firstname, employees.id, permissions.worker_id, "
+                                     "permissions.mobile "
+                                     "FROM permissions, employees "
+                                     "WHERE employees.id = permissions.worker_id AND permissions.mobile = 'Nokia 3310';", 
+                                     self.connection)
+        print(f'\nSpecific query:\n{specific_query}')
 
         self.db_permissions_length = len(loaded_sql)
 
         return loaded_sql
 
     def show_premission_table(self):
-        print(self.read_from_premission_table())
+        print(f'\nPremission Table:\n{self.read_from_premission_table()}')
 
 
 class GetEmployeesData:
@@ -128,7 +136,7 @@ class GetEmployeesData:
             return True
 
 
-class SetTreeViewBox:
+class SetTreeViewBox:  # TreeView on "Add Workers" tab
     def __init__(self, model):
         self.datas = GetEmployeesData()
         self.model = model
@@ -175,25 +183,17 @@ class Tabs:
         self.tabs.addTab(self.tab1, "Add worker")
         self.tabs.addTab(self.tab2, "Read from DB")
 
-        # Create first tab
-        self.tab1.layout = qtw.QVBoxLayout(parent)
-        self.label = qtw.QLabel()
-
-        self.tab1.layout.addWidget(self.label)
-        self.tab1.setLayout(self.tab1.layout)
-
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
         parent.setLayout(self.layout)
 
 
-class Tab2:
+class Tab2:  # Read from DB
     def __init__(self, parent):
         self.tab = parent
         self.db = WorkersPropertiesDataBase()
 
-        self.index = None
-        self.row_id = None
+        self.row_id = None  # selected row index from TreeView
 
         self.frame = qtw.QFrame(self.tab)
         # Frame on Tab 2
@@ -234,23 +234,28 @@ class Tab2:
         self.button_2.setGeometry(620, 175, 50, 25)
         self.button_2.hide()
 
+        # Mobile ComboBox
         self.combo = qtw.QComboBox(self.tab)
         self.combo.addItems(["None", "Nokia 3310", "Siemens A40", "Samsung S10"])
         self.combo.setGeometry(81, 179, 100, 20)
         self.combo.hide()
 
+        # Warehouse ComboBox
         self.combo2 = qtw.QComboBox(self.tab)
         self.combo2.addItems(["None", "True", "False"])
         self.combo2.setGeometry(200, 179, 100, 20)
         self.combo2.hide()
 
+        # Button events on Tab 2
         self.button_1.clicked.connect(self.set_treeview_box)
         self.dataView2.clicked.connect(self.show_hidden_widgets)
         self.dataView2.clicked.connect(self.get_row)
-        self.button_2.clicked.connect(self.send)
+        self.button_2.clicked.connect(self.send_button)
 
     def set_treeview_box(self):
+        self.db.show_employees_table()  # show tables
         self.db.show_premission_table()
+
         # Treeview inbox model in Tab 2
         model = qtg.QStandardItemModel(0, 4)  # the 3 column of the treeview box
         self.dataView2.setModel(model)
@@ -274,10 +279,9 @@ class Tab2:
         row = []
 
         for i in self.dataView2.selectedIndexes():
-            row.append(i.data())
+            row.append(i.data())  # get row from the treeview
 
         self.row_id = row[0]
-        print(self.row_id)
 
     def show_hidden_widgets(self):
         self.combo.show()
@@ -287,24 +291,27 @@ class Tab2:
         self.combo2.show()
         self.button_2.show()
 
-    def send(self):
-        a = self.combo2.currentText()
-        b = self.combo.currentText()
-        if a != "None":
-            print(a)
-            print(b)
-            print(self.row_id)
-            self.db.insert_into_permissions_table(self.row_id, b, a)
+    def hide_widgets(self):
+        self.combo.hide()
+        self.label_1.hide()
+        self.frame.hide()
+        self.label_2.hide()
+        self.combo2.hide()
+        self.button_2.hide()
+
+    def send_button(self):
+        warehouse = self.combo2.currentText()
+        mobile = self.combo.currentText()
+
+        if warehouse != "None":  # if the "warehouse" combobox value not "None" send datas to the "permissions" table
+            self.db.insert_into_permissions_table(self.row_id, mobile, warehouse)
+
             self.db.show_premission_table()
-            self.combo.setCurrentText("None")
+
+            self.combo.setCurrentText("None")  # adjust back the interface
             self.combo2.setCurrentText("None")
             self.dataView2.reset()
-            self.combo.hide()
-            self.label_1.hide()
-            self.frame.hide()
-            self.label_2.hide()
-            self.combo2.hide()
-            self.button_2.hide()
+            self.hide_widgets()
 
 
 class MainWindow(qtw.QWidget):
